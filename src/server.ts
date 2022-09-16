@@ -25,20 +25,37 @@ app.get("/games", async (req, res) => {
   return res.json(games);
 });
 
-app.get("/games/:id/ads", (req, res) => {
+app.get("/games/:id/ads", async (req, res) => {
   const { id } = req.params;
 
-  const games = [
-    { id: 1, name: "CS" },
-    { id: 2, name: "LOL" },
-    { id: 3, name: "DOTA" },
-    { id: 4, name: "APEX" },
-    { id: 5, name: "BDO" },
-  ];
+  let ads = await prisma.ad.findMany({
+    select: {
+      id: true,
+      name: true,
+      weekDays: true,
+      useVoiceChannel: true,
+      yearsPlaying: true,
+      hourStart: true,
+      hourEnd: true,
+    },
+    where: {
+      gameId: id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
-  const game = games.find((game) => game.id === Number(id));
-
-  return res.json({ game });
+  return res.json(
+    ads.map((ad) => {
+      return {
+        ...ad,
+        weekDays: ad.weekDays.split(","),
+        hourStart: convertMinutesToHourString(ad.hourStart),
+        hourEnd: convertMinutesToHourString(ad.hourEnd),
+      };
+    })
+  );
 });
 
 /////////////////////////////////////////////////////////
@@ -58,39 +75,6 @@ app.post("/games/:id/ads", async (req, res) => {
   });
 
   return res.status(201).json(ad);
-});
-
-app.get("/ads/:gameId/ads", async (req, res) => {
-  const { gameId } = req.params;
-
-  let ads = await prisma.ad.findMany({
-    select: {
-      id: true,
-      name: true,
-      weekDays: true,
-      useVoiceChannel: true,
-      yearsPlaying: true,
-      hourStart: true,
-      hourEnd: true,
-    },
-    where: {
-      gameId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  return res.json(
-    ads.map((ad) => {
-      return {
-        ...ad,
-        weekDays: ad.weekDays.split(","),
-        hourStart: convertMinutesToHourString(ad.hourStart),
-        hourEnd: convertMinutesToHourString(ad.hourEnd),
-      };
-    })
-  );
 });
 
 app.get("/ads/:id/discord", async (req, res) => {
